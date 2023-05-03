@@ -35,5 +35,5 @@ parceiros no texto da revisão foram substituídas pelos nomes das grandes casas
 de Game of Thrones.
 
 Segue um schema com a relação entre os dados:
-<br>
-![schema](images/schema.png)
+
+![sch](images/schema.png)
