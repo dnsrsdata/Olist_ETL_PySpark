@@ -1,4 +1,4 @@
-# Olist data organization
+# Olist data organization EM DESENVOLVIMENTO
 
 ### Sobre o problema
 Esse conjunto de dados foi generosamente fornecido pela Olist, a maior loja de 
@@ -37,3 +37,7 @@ de Game of Thrones.
 Segue um schema com a relação entre os dados:
 
 ![sch](images/schema.png)
+
+```sh
+    python3 src/External_Data_Treatment.py "data/external/postcode_ranges.xlsx - Sheet1.csv"
+```
