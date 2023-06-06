@@ -41,3 +41,10 @@ Segue um schema com a relação entre os dados:
 ```sh
     python3 src/External_Data_Treatment.py "data/external/postcode_ranges.xlsx - Sheet1.csv"
 ```
+
+```sh
+    python3 src/data_load_to_S3.py "data/external/cep_prefixes_processed.parquet/part-00000-e1039c27-02fe-4cf3-bb9a-1f38f844fea9-c000.snappy.parquet" "elasticbeanstalk-sa-east-1-239752289020" "external/cep_prefixes_processed.parquet"
+```
+```sh
+    python3 src/data_transform.py "data/raw/olist_customers_dataset.csv" "data/raw/olist_geolocation_dataset.csv" "data/raw/olist_order_items_dataset.csv" "data/raw/olist_order_payments_dataset.csv" "data/raw/olist_orders_dataset.csv" "data/raw/olist_products_dataset.csv" "data/raw/olist_sellers_dataset.csv" "data/external/cep_prefixes_processed.parquet/part-00000-e1039c27-02fe-4cf3-bb9a-1f38f844fea9-c000.snappy.parquet"
+```    
