@@ -23,7 +23,7 @@ def transform_customers_table(path_customers, spark, cep_dataframe):
                             cs.customer_zip_code_prefix, \
                             LOWER(cp.locality) AS customer_city,  \
                             LOWER(cs.customer_state) AS customer_state \
-                           FROM customers cs  \
+                            FROM customers cs  \
                             LEFT JOIN ceps cp  \
                             ON CAST(cs.customer_zip_code_prefix AS INT) = cp.cep_prefix")
     
@@ -51,7 +51,7 @@ def transform_geolocation_table(path_geolocation, spark, cep_dataframe):
                             LOWER(cp.locality) AS geolocation_city, \
                             g.geolocation_city AS geolocation_city_original, \
                             LOWER(geolocation_state) AS geolocation_state \
-                            FROM geolocalization AS g  \
+                            FROM geolocation AS g  \
                             LEFT JOIN ceps cp  \
                             ON CAST(g.geolocation_zip_code_prefix AS INT) = cp.cep_prefix")
     
@@ -225,7 +225,7 @@ def main():
         
         # carrega os dados de CEP
         print("Carregando os dados de CEP")
-        cep_dataframe = spark.read.csv(ceps_path, header=True)
+        cep_dataframe = spark.read.parquet(ceps_path)
         
         
         # Transformando as tabelas
@@ -241,13 +241,13 @@ def main():
         
         # Salvando as tabelas
         print("Salvando as tabelas...")
-        customers.write.mode('overwrite').parquet("../data/interim/customers.parquet")
-        geolocation.write.mode('overwrite').parquet("../data/interim/geolocation.parquet")
-        order_items.write.mode('overwrite').parquet("../data/interim/order_items.parquet")
-        order_payments.write.mode('overwrite').parquet("../data/interim/order_payments.parquet")
-        orders.write.mode('overwrite').parquet("../data/interim/orders.parquet")
-        products.write.mode('overwrite').parquet("../data/interim/products.parquet")
-        sellers.write.mode('overwrite').parquet("../data/interim/sellers.parquet")
+        customers.write.mode('overwrite').parquet("data/interim/customers.parquet")
+        geolocation.write.mode('overwrite').parquet("data/interim/geolocation.parquet")
+        order_items.write.mode('overwrite').parquet("data/interim/order_items.parquet")
+        order_payments.write.mode('overwrite').parquet("data/interim/order_payments.parquet")
+        orders.write.mode('overwrite').parquet("data/interim/orders.parquet")
+        products.write.mode('overwrite').parquet("data/interim/products.parquet")
+        sellers.write.mode('overwrite').parquet("data/interim/sellers.parquet")
         print("Tabelas salvas com sucesso!")
     
     
