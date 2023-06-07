@@ -1,4 +1,6 @@
+import os
 import sys
+import boto3
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 
@@ -212,6 +214,20 @@ def transform_sellers_table(path_sellers, spark, cep_dataframe):
 
     return sellers
 
+def load_data_to_S3(path, bucketname):
+    """Carrega os dados para o S3
+
+    Args:
+        path (str): caminho da pasta com os dados
+        bucketname (str): nome do bucket
+    """
+    s3 = boto3.client('s3')
+    for root,dirs,files in os.walk(path):
+        for file in files:
+            s3.upload_file(os.path.join(root,file),
+                           bucketname, 
+                           'raw/' + root[root.find('m/') + 2:])
+
 def main():
     
     if len(sys.argv) == 9:
@@ -249,7 +265,17 @@ def main():
         products.write.mode('overwrite').parquet("data/interim/products.parquet")
         sellers.write.mode('overwrite').parquet("data/interim/sellers.parquet")
         print("Tabelas salvas com sucesso!")
-    
+        
+        # Buscando o caminho das pastas
+        diretorios = [root for root,dirs,files in os.walk('data/interim')]
+        print(diretorios)
+
+        # Carregando para o S3
+        print("Carregando os dados para o S3...")
+        for diretorio in diretorios:
+            load_data_to_S3(diretorio, 
+                            "elasticbeanstalk-sa-east-1-239752289020")
+        print("Dados carregados com sucesso!")
     
 if __name__ == "__main__":
     main()
