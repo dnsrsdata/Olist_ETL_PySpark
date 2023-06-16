@@ -1,8 +1,8 @@
-import os
+# Autor: Daniel Soares
 import sys
-import boto3
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
+from pyspark.sql.functions import udf, col, month, hour, datediff, dayofweek
+from pyspark.sql.types import StringType
 
 def transform_customers_table(path_customers, spark, cep_dataframe):
     """ Transforma a tabela de clientes.
@@ -214,35 +214,265 @@ def transform_sellers_table(path_sellers, spark, cep_dataframe):
 
     return sellers
 
-def load_data_to_S3(path, bucketname):
-    """Carrega os dados para o S3
+def load_reviews_table(path_reviews, spark):
+    """carrega os dados da tabela reviews
 
     Args:
-        path (str): caminho da pasta com os dados
-        bucketname (str): nome do bucket
+        path_reviews (str): path da tabela reviews
+        spark (SparkSession): Sessão spark
     """
-    s3 = boto3.client('s3')
-    for root,dirs,files in os.walk(path):
-        for file in files:
-            s3.upload_file(os.path.join(root,file),
-                           bucketname, 
-                           'raw/' + root[root.find('m/') + 2:])
+    # carregando os dados
+    reviews = spark.read.csv(path_reviews, header=True)
+    
+    return reviews
 
+def load_product_categories_table(path_product_categories, spark):
+    """carrega os dados da tabela product_categories
+
+    Args:
+        path_product_categories (str): path da tabela product_categories
+        spark (SparkSession): Sessão spark
+    """
+    # carregando os dados
+    product_category = spark.read.csv(path_product_categories, header=True)
+    
+    return product_category
+
+def create_region_column(table, col_with_state, new_col_name):
+    """Cria a coluna de região
+
+    Args:
+        table (SparkDf): tabela que será criada a 
+        col_with_state (str): coluna com o estado
+        new_col_name (str): nome da nova coluna
+        
+    Returns:
+        SparkDf: tabela com a nova coluna
+    """
+    # Criando lista de regiões  
+    estados_norte = ['ac', 'am', 'ro', 'rr', 'ap', 'to', 'pa']
+    estados_nordeste = ['ma', 'pi', 'ce', 'rn', 'pb', 'pe', 'al', 'ba', 'se']
+    estados_centro = ['mt', 'ms', 'df', 'go']
+    estados_sudeste = ['mg', 'sp', 'es', 'rj']
+    estados_sul = ['pr', 'sc', 'rs']
+
+    # Criando função 
+    estados_binarizer_func = lambda estado: 'norte' if estado in estados_norte else \
+                            ('nordeste' if estado in estados_nordeste else \
+                            ('centro-oeste' if estado in estados_centro else \
+                            ('sudeste' if estado in estados_sudeste else 'sul')))
+
+    estados_binarizer_func_udf = udf(estados_binarizer_func, StringType())
+    
+    table = table.withColumn(new_col_name, 
+                             estados_binarizer_func_udf(col_with_state))
+    
+    return table
+
+def binarizer_product_category(table, col_with_category, new_col_name):
+    """Binariza a coluna de categoria de produtos
+
+    Args:
+        table (SoarkDF): tabela que será criada a coluna
+        col_with_category (str): coluna com a categoria de produtos
+        new_col_name (str): nome da nova coluna
+        
+    Returns:
+        SparkDf: tabela com a nova coluna
+    """
+    # Criando novas categorias
+    eletronicos_e_tecnologia = ['pcs', 'pc_gamer', 'tablets_impressao_imagem', 
+                                'telefonia_fixa', 'telefonia', 
+                                'informatica_acessorios', 'eletronicos', 'audio', 
+                                'consoles_games', 'dvds_blu_ray']
+
+    moda_e_acessorios = ['fashion_roupa_masculina', 'fashion_roupa_feminina',
+                        'fashion_roupa_infanto_juvenil',
+                        'fashion_underwear_e_moda_praia',
+                        'fashion_bolsas_e_acessorios', 'fashion_calcados',
+                        'fashion_esporte']
+
+    casa_e_decoracao = ['moveis_decoracao', 'moveis_colchao_e_estofado', 
+                        'moveis_cozinha_area_de_servico_jantar_e_jardim', 
+                        'moveis_quarto', 'moveis_sala', 'utilidades_domesticas', 
+                        'cama_mesa_banho', 'casa_construcao', 'casa_conforto', 
+                        'casa_conforto_2']
+
+    livros_e_educacao = ['livros_tecnicos', 'livros_importados', 
+                        'livros_interesse_geral']
+
+    beleza_e_saude = ['beleza_saude', 'fraldas_higiene', 'perfumaria']
+
+    brinquedos_e_jogos = ['brinquedos', 'jogos', 'instrumentos_musicais']
+
+    alimentos_e_bebidas = ['alimentos_bebidas', 'bebidas', 'alimentos']
+
+    artigos_para_festas = ['artigos_de_festas', 'artigos_de_natal']
+
+    arte_e_artesanato = ['artes', 'cine_foto', 'artes_e_artesanato']
+
+    ferramentas_e_construcao = ['construcao_ferramentas_construcao', 
+                                'construcao_ferramentas_seguranca', 
+                                'construcao_ferramentas_jardim', 
+                                'construcao_ferramentas_iluminacao', 
+                                'construcao_ferramentas_ferramentas']
+
+    esporte_e_lazer = ['esporte_lazer']
+
+    outros = ['cool_stuff', 'flores', 'industria_comercio_e_negocios', 
+            'malas_acessorios', 'seguros_e_servicos', 'market_place', 
+            'relogios_presentes', 'papelaria', 'climatizacao', 
+            'sinalizacao_e_seguranca', 'agro_industria_e_comercio', 
+            'cds_dvds_musicais', 'musica', 'eletroportateis']
+    
+    # Criando a função
+    produto_binarizer_func = lambda categoria: 'eletronicos e tecnologia' if categoria in eletronicos_e_tecnologia else \
+                                              ('moda e acessorios' if categoria in moda_e_acessorios else \
+                                              ('casa e decoracao' if categoria in casa_e_decoracao else \
+                                              ('livros e educacao' if categoria in livros_e_educacao else \
+                                              ('beleza e saude' if categoria in beleza_e_saude else \
+                                              ('brinquedos e jogos' if categoria in brinquedos_e_jogos else \
+                                              ('alimentos_e_bebidas' if categoria in alimentos_e_bebidas else \
+                                              ('artigos para festas' if categoria in artigos_para_festas else \
+                                              ('arte e artesanato' if categoria in arte_e_artesanato else \
+                                              ('ferramentas e construcao' if categoria in ferramentas_e_construcao else \
+                                              ('esporte e lazer' if categoria in esporte_e_lazer else 'outros'))))))))))   
+
+    produto_binarizer_func_udf = udf(produto_binarizer_func, StringType())
+
+    # Criando nova coluna
+    table = table.withColumn(new_col_name, 
+                             produto_binarizer_func_udf(col_with_category))
+
+
+    return table
+
+def create_days_of_week_column(table, col_with_date, new_col_name):
+    """Cria dados referente aos dias da semana
+
+    Args:
+        table (SparkDF): tabela que será criada a coluna
+        col_with_date (str): coluna com a data
+        new_col_name (str): nome da nova coluna
+        
+    Returns:
+        SparkDF: tabela com a nova coluna
+    """
+    # Obtendo o dia da semana da compra
+    table = table.withColumn(new_col_name, 
+                               dayofweek(col_with_date))
+
+    # Criando uma função para obter o nome do dia da semana
+    days_num_func = lambda dia: 'sunday' if dia == 1 else  \
+            ('monday' if dia == 2 else  \
+            ('tuesday' if dia == 3 else  \
+            ('wednesday' if dia == 4 else  \
+            ('thursday' if dia == 5 else  \
+            ('friday' if dia == 6 else 'saturday')))))
+
+    days_num_func_udf = udf(days_num_func, StringType())
+
+    # Aplicando a função
+    table = table.withColumn('order_name_day_of_week', 
+                               days_num_func_udf('order_day_of_week'))
+    
+    
+    return table
+
+def create_month_column(table, col_with_date, new_col_name):
+    """Cria dados referente ao mês
+
+    Args:
+        table (SparkDF): tabela que será criada a coluna
+        col_with_date (str): coluna com a data
+        new_col_name (str): nome da nova coluna
+        
+    Returns:
+        SparkDF: tabela com a nova coluna
+    """
+    # Obtendo o mês da compŕa
+    table = table.withColumn(new_col_name, month(col_with_date))
+
+    # Criando uma função para nomear os meses
+    mes_num_func = lambda mes: 'january' if mes == 1 else  \
+            ('february' if mes == 2 else  \
+            ('march' if mes == 3 else  \
+            ('april' if mes == 4 else  \
+            ('may' if mes == 5 else  \
+            ('june' if mes == 6 else  \
+            ('july' if mes == 7 else  \
+            ('august' if mes == 8 else  \
+            ('september' if mes == 9 else  \
+            ('october' if mes == 10 else  \
+            ('november' if mes == 11 else 'december'))))))))))
+
+    mes_num_func_udf = udf(mes_num_func, StringType())
+
+    # Aplicando a função
+    table = table.withColumn('order_name_month', mes_num_func_udf('order_month'))
+
+
+    return table
+
+def create_new_features(customers_table, sellers_table, products_table, products_category_table, orders_table):
+    """Cria novas features a partir dos datasets
+
+    Args:
+        customers_table (Spark DataFrame): tabela de clientes
+        sellers_table (Spark Dataframe): tabela de vendedores
+        products_table (Spark Dataframe): tabela de produtos
+        products_category_table (Spark Dataframe): tabela de categorias de produtos
+        orders_table (Spark Dataframe): tabela de pedidos
+    """
+    # Criando coluna de região para os clientes e vendedores
+    customers_table = create_region_column(customers_table, 'customer_state', 'customer_region')
+    sellers_table = create_region_column(sellers_table, 'seller_state', 'seller_region')
+    products_category_table = binarizer_product_category(products_category_table, 'product_category_name', 'sub_product_category')
+    
+    # Alterando a unidade de medida das colunas
+    products_table = products_table.withColumn('product_weight_kg', col('product_weight_g')/1000)
+    products_table = products_table.withColumn('product_length_m', col('product_length_cm')/100)
+    products_table = products_table.withColumn('product_height_m', col('product_height_cm')/100)
+    products_table = products_table.withColumn('product_width_m', col('product_width_cm')/100)
+
+    # Criando novos dados a partir de colunas de data
+    orders_table = create_days_of_week_column(orders_table, 'order_purchase_timestamp', 'order_day_of_week')
+    orders_table = create_month_column(orders_table, 'order_purchase_timestamp', 'order_month')
+    orders_table = orders_table.withColumn('order_delivery_days', datediff('order_delivered_customer_date', 'order_purchase_timestamp'))
+    orders_table = orders_table.withColumn('order_hour', hour('order_purchase_timestamp'))
+    orders_table = orders_table.withColumn('order_processing_days', datediff('order_approved_at', 'order_purchase_timestamp'))
+    
+    return customers_table, sellers_table, products_table, products_category_table, orders_table
+
+def save_data(customers_df, geolocalization_df, order_items_df, order_payments_df, order_reviews_df, orders_df, products_df, sellers_df, product_category_df):
+    """Salva os dados processados em parquet.
+    """
+    
+    customers_df.write.mode('overwrite').parquet('data/processed/customers.parquet')
+    geolocalization_df.write.mode('overwrite').parquet('data/processed/geolocation.parquet')
+    order_items_df.write.mode('overwrite').parquet('data/processed/order_items.parquet')
+    order_payments_df.write.mode('overwrite').parquet('data/processed/order_payments.parquet')
+    order_reviews_df.write.mode('overwrite').parquet('data/processed/order_reviews.parquet')
+    orders_df.write.mode('overwrite').parquet('data/processed/orders.parquet')
+    products_df.write.mode('overwrite').parquet('data/processed/products.parquet')
+    sellers_df.write.mode('overwrite').parquet('data/processed/sellers.parquet')
+    product_category_df.write.mode('overwrite').parquet('data/processed/product_category.parquet')
+    
 def main():
     
-    if len(sys.argv) == 9:
+    if len(sys.argv) == 11:
     
         # Iniciando sessão no Spark
         spark = SparkSession.builder.appName('Cluster').getOrCreate()
 
         # Salvando os paths
-        customers_path, geolocation_path, order_items_path, order_payments_path, \
-        orders_path, products_path, sellers_path, ceps_path = sys.argv[1:]
+        customers_path, geolocation_path, order_items_path, order_payments_path,\
+        order_reviews_path, orders_path, products_path, sellers_path, \
+        products_category_path, ceps_path = sys.argv[1:]
         
         # carrega os dados de CEP
         print("Carregando os dados de CEP")
         cep_dataframe = spark.read.parquet(ceps_path)
-        
         
         # Transformando as tabelas
         print("Transformando as tabelas...")
@@ -253,29 +483,23 @@ def main():
         orders = transform_orders_table(orders_path, spark)
         products = transform_products_table(products_path, spark)
         sellers = transform_sellers_table(sellers_path, spark, cep_dataframe)
+        product_category = load_product_categories_table(products_category_path, spark)
+        order_reviews = load_reviews_table(order_reviews_path, spark)
         print("Tabelas transformadas com sucesso!")
+        
+        # Cria novas features
+        print("Criando novas features...")
+        customers, sellers, products, products_category, orders = create_new_features(customers, 
+                                                                                      sellers, 
+                                                                                      products, 
+                                                                                      product_category, 
+                                                                                      orders)
+        print("Novas features criadas com sucesso!")
         
         # Salvando as tabelas
         print("Salvando as tabelas...")
-        customers.write.mode('overwrite').parquet("data/interim/customers.parquet")
-        geolocation.write.mode('overwrite').parquet("data/interim/geolocation.parquet")
-        order_items.write.mode('overwrite').parquet("data/interim/order_items.parquet")
-        order_payments.write.mode('overwrite').parquet("data/interim/order_payments.parquet")
-        orders.write.mode('overwrite').parquet("data/interim/orders.parquet")
-        products.write.mode('overwrite').parquet("data/interim/products.parquet")
-        sellers.write.mode('overwrite').parquet("data/interim/sellers.parquet")
+        save_data(customers, geolocation, order_items, order_payments, order_reviews, orders, products, sellers, product_category)
         print("Tabelas salvas com sucesso!")
-        
-        # Buscando o caminho das pastas
-        diretorios = [root for root,dirs,files in os.walk('data/interim')]
-        print(diretorios)
-
-        # Carregando para o S3
-        print("Carregando os dados para o S3...")
-        for diretorio in diretorios:
-            load_data_to_S3(diretorio, 
-                            "elasticbeanstalk-sa-east-1-239752289020")
-        print("Dados carregados com sucesso!")
     
 if __name__ == "__main__":
     main()
