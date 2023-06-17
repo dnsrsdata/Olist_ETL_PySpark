@@ -61,7 +61,7 @@ versão para evitar problemas de compatibilidade.
 1. Clone o repositório
 
 ```sh
-    git clone https://github.com/dnsrsdata/Football_Player_Rec_Syst
+    git clone https://github.com/dnsrsdata/Olist_ETL_PySpark
 ```
 
 2. Instale as dependências
