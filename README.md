@@ -73,7 +73,7 @@ versão para evitar problemas de compatibilidade.
 3. Execute o seguinte comando no terminal para preparar os dados externos
 
 ```sh
-    python3 src/External_Data_Treatment.py "data/external/postcode_ranges.xlsx - Sheet1.csv"
+    python3 src/External_Data_Transform.py "data/external/postcode_ranges.xlsx - Sheet1.csv"
 ```
 
 4. Execute o seguinte comando para executar o script de ETL
