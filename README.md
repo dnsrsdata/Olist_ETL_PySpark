@@ -79,7 +79,7 @@ versão para evitar problemas de compatibilidade.
 4. Execute o seguinte comando para executar o script de ETL
 
 ```sh
-    python3 src/data_transform.py "data/raw/olist_customers_dataset.csv" "data/raw/olist_geolocation_dataset.csv" "data/raw/olist_order_items_dataset.csv" "data/raw/olist_order_payments_dataset.csv" "data/raw/olist_order_reviews_dataset.csv" "data/raw/olist_orders_dataset.csv" "data/raw/olist_products_dataset.csv" "data/raw/olist_sellers_dataset.csv" "data/raw/product_category_name_translation.csv" "data/external/cep_prefixes_processed.parquet/part-00000-e1039c27-02fe-4cf3-bb9a-1f38f844fea9-c000.snappy.parquet"
+    python3 src/data_transform.py "data/raw/olist_customers_dataset.csv" "data/raw/olist_geolocation_dataset.csv" "data/raw/olist_order_items_dataset.csv" "data/raw/olist_order_payments_dataset.csv" "data/raw/olist_order_reviews_dataset.csv" "data/raw/olist_orders_dataset.csv" "data/raw/olist_products_dataset.csv" "data/raw/olist_sellers_dataset.csv" "data/raw/product_category_name_translation.csv" "data/external/cep_prefixes_processed.parquet"
 ```
 
 ## Descrição dos aquivos
