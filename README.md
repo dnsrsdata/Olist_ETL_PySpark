@@ -1,4 +1,4 @@
-# Olist ETL EM DESENVOLVIMENTO
+# Olist ETL
 
 ### Sobre o problema
 
